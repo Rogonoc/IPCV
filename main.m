@@ -8,7 +8,7 @@ hVideoSrc = VideoReader('MAH01462.MP4');
 
 % User input
 roi = [0.5, 402, 1042, 90]; % Horizontal looking island
-mThreshold = 1500;
+mThreshold = 2000;
 
 % Reset the video source to the beginning of the file.
 read(hVideoSrc, 1);
@@ -56,12 +56,12 @@ end
 release(hVPlayer);
 
 %% Test
-% 
-% roi = [0.5, 402, 1042, 90]; % Horizontal looking island
-% 
-% imgA = rgb2gray(im2single(readFrame(hVideoSrc))); % Read first frame into imgA
-% pointsA = detectSURFFeatures(imgA, 'MetricThreshold', 1500, 'ROI', roi);
-% % Display corners found in images A and B.
-% figure; imshow(imgA); hold on;
-% plot(pointsA);
-% title('Corners in A');
+
+roi = [0.5, 402, 1042, 90]; % Horizontal looking island
+
+imgA = rgb2gray(im2single(readFrame(hVideoSrc))); % Read first frame into imgA
+pointsA = detectSURFFeatures(imgA, 'MetricThreshold', 2000, 'ROI', roi);
+% Display corners found in images A and B.
+figure; imshow(imgA); hold on;
+plot(pointsA);
+title('Corners in A');
