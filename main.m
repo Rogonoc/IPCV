@@ -35,7 +35,7 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
     imgB = rgb2gray(im2single(readFrame(hVideoSrc)));
 
     % Estimate transform from current frame A to next frame B
-    H = estimateTransformFeatures(imgA, imgB, 1500, roi);
+    H = estimateTransformFeatures(imgA, imgB, mThreshold, roi);
 
     % Compute cumulative transformation matrix
     Hcumulative = H * Hcumulative;
