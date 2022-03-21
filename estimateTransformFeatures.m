@@ -1,4 +1,21 @@
 function H = estimateTransformFeatures(imageA, imageB, ptThreshold, ptROI)
+% H = estimateTransformFeatures(imageA, imageB, ptThreshold, ptROI)
+%  Estimates the transformation matrix from image A to image B by first
+%  detecting the SURF-features in both images, for which features are 
+%  are extracted afterwards. Based on the common features the transformation
+%  matrix is estimated from image A to image B.
+%
+%  imageA: first image acting as our base
+%
+%  imageB: second image to which we want to transform our base to
+%
+%  ptThreshold: threshold value for strength of found features
+%       Integer value [0, ->]
+%
+%  ptROI: specify the Region of Interest over where features should be extracted
+%       Rectangle of [cornerTopLeftX cornerTopLeftY width length]   
+%
+% BASED ON: cvexEstStabilizationTform() from MATLAB ©
 
 % Set default parameters
 if nargin < 4 || isempty(ptROI)

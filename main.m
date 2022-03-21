@@ -7,8 +7,8 @@ clc;
 hVideoSrc = VideoReader('MAH01462.MP4');
 
 % User input
-roi = [0.5, 402, 1042, 90]; % Horizontal looking island
-mThreshold = 2000;
+roi = [0.500000000000000,0.500000000000000,1440,5.257500000000003e+02]; % Horizontal looking island + clouds
+mThreshold = 1300; % Threshold value for the points
 
 % Reset the video source to the beginning of the file.
 read(hVideoSrc, 1);
@@ -48,19 +48,20 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
     % Compute corrected mean
     correctedMean = correctedMean + imgBp;
 
-    % Incrmeent frame counter
+    % Increment frame counter
     ii = ii + 1;
 end
 
 % Release video viewer
 release(hVPlayer);
 
-%% Test
+%% Test region of interest + threshold
 hVideoSrc = VideoReader('MAH01462.MP4');
-roi = [0.5, 402, 1042, 90]; % Horizontal looking island
+roi = [0.500000000000000,0.500000000000000,1440,5.257500000000003e+02]; % Horizontal looking island + clouds
 
 imgA = rgb2gray(im2single(readFrame(hVideoSrc))); % Read first frame into imgA
-pointsA = detectSURFFeatures(imgA, 'MetricThreshold', 2000, 'ROI', roi);
+pointsA = detectSURFFeatures(imgA, 'MetricThreshold', 1300, 'ROI', roi);
+
 % Display corners found in images A and B.
 figure; imshow(imgA); hold on;
 plot(pointsA);
