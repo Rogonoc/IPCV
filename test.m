@@ -27,7 +27,7 @@ ii = 2;
 % Initial transformation matrix
 Hcumulative = eye(3);
 
-while hasFrame(hVideoSrc) && ii < 30
+while hasFrame(hVideoSrc) && ii < 3
     % Read new frame
     imgA = imgB; % z^-1
     frameA = readFrame(hVideoSrc);
@@ -75,14 +75,15 @@ title('Corners in A');
 %imshow(imgA)
 
 % Draw ROI over location of buoy 
+%roi_buoy = [6.432499999999999e+02, 5.00000000000001e+02, 34.500000000000000, 25.500000000000000];
 roi_buoy = [6.432499999999999e+02, 5.00000000000001e+02, 34.500000000000000, 25.500000000000000];
-objectImage = insertShape(frameA, 'Rectangle', roi_buoy,'Color','red');
+objectImage = insertShape(imgBp, 'Rectangle', roi_buoy, 'Color','red');
 figure(1); imshow(objectImage)
 
 %%
 
 % Detect points in ROI
-points = detectSURFFeatures(im2gray(frameA), 'MetricThreshold', 0, 'ROI', roi_buoy);
-pointImage = insertMarker(frameA, points.Location, '+', 'Color', 'white');
+points = detectMinEigenFeatures(imgBp, 'MinQuality', 0.5, 'ROI', roi_buoy);
+%points = detectSURFFeatures(im2gray(imgBp), 'MetricThreshold', 0, 'ROI', roi_buoy);
+pointImage = insertMarker(imgBp, points.Location, '+', 'Color', 'white');
 figure(2); imshow(pointImage);
-
