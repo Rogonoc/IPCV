@@ -7,8 +7,8 @@ clc;
 hVideoSrc = VideoReader('MAH01462.MP4');
 
 % User input
-roi = [0.5, 402, 1042, 90]; % Horizontal looking island
-mThreshold = 2000;
+roi = [0.500000000000000,0.500000000000000,1440,5.257500000000003e+02]; % Horizontal looking island
+mThreshold = 1300;
 
 % Reset the video source to the beginning of the file.
 read(hVideoSrc, 1);
@@ -81,7 +81,8 @@ figure(1); imshow(objectImage)
 
 %%
 
-% Detecct points in ROI
+% Detect points in ROI
 points = detectSURFFeatures(im2gray(frameA), 'MetricThreshold', 0, 'ROI', roi_buoy);
 pointImage = insertMarker(frameA, points.Location, '+', 'Color', 'white');
 figure(2); imshow(pointImage);
+
