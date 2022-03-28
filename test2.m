@@ -12,7 +12,7 @@ roi_buoy = [6.432499999999999e+02, 5.00000000000001e+02, 35.500000000000000, 35.
 mThreshold = 1300;
 
 % Reset the video source to the beginning of the file.
-read(hVideoSrc, 1);
+%read(hVideoSrc, 1);
 
 % Create video viewer
 hVPlayer = vision.VideoPlayer; 
@@ -26,6 +26,7 @@ imgBp = imgB;
 
 % Initialize other variables
 trackerAlive = 0;
+trackerWasAlive = 0;
 KLT_points = [];
 
 % Find features of interest in first frame
@@ -52,7 +53,7 @@ Hcumulative = eye(3);
 % 5. Freeze ROI. Go back to step 2
 
 % Start tracking features in video
-while hasFrame(hVideoSrc) && ii < 200
+while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
     % Read new frame
     imgA = imgB; % z^-1
     imgAp = imgBp; % z^-1
@@ -74,7 +75,11 @@ while hasFrame(hVideoSrc) && ii < 200
     % Check if buoy is detected in ROI using FeatureFinder
     if (trackerAlive == 0)
         % Detect features using BRISK-algorithm 
-        points = detectBRISKFeatures(imgBp, 'MinQuality', 0.6, 'MinContrast', 0.28, 'ROI', roi_buoy);
+        if (trackerWasAlive == 0)
+            points = detectBRISKFeatures(imgBp, 'MinQuality', 0.6, 'MinContrast', 0.28, 'ROI', roi_buoy);
+        elseif (trackerWasAlive == 1)
+            points = detectBRISKFeatures(imgBp, 'MinQuality', 0.2, 'MinContrast', 0.20, 'ROI', [KLT_points(1) - (rectSize/2), KLT_points(2) - (rectSize/2), 2*rectSize, 2*rectSize]);
+        end
 
         % Check if points were returned by FeatureFinder in ROI
         if ~isempty(points) 
@@ -92,20 +97,21 @@ while hasFrame(hVideoSrc) && ii < 200
     
             % Indicate that tracker is alive
             trackerAlive = 1;
+            trackerWasAlive = 1;
         end
     elseif (trackerAlive == 1)
         % DON'T INITIALIZE TRACKER AGAIN
         % LET IT DO ITS THING
-
+        
         % Return points of the KLT-tracker
         [KLT_points, validity] = tracker(frame);
 
         % Check ROI based on current returned point of KLT-tracker
-        rectSize = 10;
-        points = detectBRISKFeatures(imgBp, 'MinQuality', 0.2, 'MinContrast', 0.20, 'ROI', [KLT_points(1) - rectSize, KLT_points(2) - rectSize, 2*rectSize, 2*rectSize]);
+        rectSize = 15;
+        points = detectBRISKFeatures(imgBp, 'MinQuality', 0.2, 'MinContrast', 0.20, 'ROI', [KLT_points(1) - (rectSize/2), KLT_points(2) - (rectSize/2), 2*rectSize, 2*rectSize]);
 
         % Are there no points returned? --> tracker should not be alive anymore
-        if (isempty(KLT_points))
+        if (isempty(KLT_points) || isempty(points))
             release(tracker); % Release the tracker
             trackerAlive = 0; % Disable tracker
         else
@@ -116,7 +122,7 @@ while hasFrame(hVideoSrc) && ii < 200
             frame = rgb2gray(im2single(frame));
         end
     end
-    
+   
     % Play current frame in video player
     step(hVPlayer, frame);
 
