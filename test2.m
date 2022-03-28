@@ -18,7 +18,7 @@ read(hVideoSrc, 1);
 hVPlayer = vision.VideoPlayer; 
 
 % Create tracker object
-tracker = vision.PointTracker('MaxBidirectionalError', 40);
+tracker = vision.PointTracker('MaxBidirectionalError', 1, 'BlockSize', [5 5]);
 
 % Initialize frames
 imgB = rgb2gray(im2single(readFrame(hVideoSrc)));
