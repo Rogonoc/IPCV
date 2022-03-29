@@ -2,7 +2,8 @@
 clear;
 clc;
 
-%% Stabilize
+%% Stabilize image + tracking buoy
+
 % Load video to variable
 hVideoSrc = VideoReader('MAH01462.MP4');
 
