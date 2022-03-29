@@ -1,6 +1,13 @@
+%% Contact information
+% Authors: 
+% Year: 2022
+% License: MIT
+% Description: Tracking a buoy in a "Man-Over-Board" video using
+%              the provided MATLAB KLT-algorithm. Image stabilization
+%              has been used as preprocessing.
+
 %% Reset workspace
-clear;
-clc;
+clear; clc;
 
 %% Stabilize image + tracking buoy
 
