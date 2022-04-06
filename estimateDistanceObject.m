@@ -32,7 +32,7 @@ end
 [R, t] = extrinsics(imagePoints, worldPoints, cameraParams);
     
 % Convert this position to world coordinates
-center_world = pointsToWorld(cameraParams, R, t, pointOfInterest);
+center_world = pointsToWorld(cameraParams, R, t, pointOfInterest); % Take mean of point of interests
 
 % Add z-coordinate
 center_world = [center_world z_centreOfWorld];

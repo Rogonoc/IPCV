@@ -13,9 +13,13 @@ clear; clc;
 
 % Load video to variable
 hVideoSrc = VideoReader('MAH01462.MP4');
-
 % Reset the video source to the beginning of the file.
 read(hVideoSrc, 1);
+
+% % Prepare to write video to file
+% hVideoOut = VideoWriter('ManOverBoard.mp4');
+% % Open the file for writing
+% open(hVideoOut);
 
 % User input (tracking)
 roi = [0.5, 0.5, 1440, 5.2575e+02];                   % Horizontal looking island with trees + clouds in horizon
@@ -38,6 +42,7 @@ z_centreOfWorld = 2.5;                                % Prior knowledge that the
 trackerAlive = 0;     % State of KLT-tracker (1)
 trackerWasAlive = 0;  % State of KLT-tracker (2)
 KLT_roi_size = 5;     % Block size of KLT-tracker
+KLT_point_prev = []; % Previous point spit out by KLT-tracker
 KLT_point = [];      % Points spit out by KLT-tracker
 ii = 2;               % Loop variable for frames
 Hcumulative = eye(3); % Initial transformation matrix (stabilization)
@@ -87,6 +92,7 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
         % Detect features using BRISK-algorithm (defined as our "FeatureFinder")
         if (trackerWasAlive == 0)     % Use initial knowledge of ROI around buoy to start tracking it [STRICT]
             points = detectBRISKFeatures(frame, 'MinQuality', 0.3, 'MinContrast', 0.3, 'ROI', roi_buoy_initial);
+            frame = insertShape(frame, 'Rectangle', roi_buoy_initial, 'Color', 'white'); frame = rgb2gray(im2single(frame));
         elseif (trackerWasAlive == 1) % Use previous knowledge of KLT-tracker point to cast new ROI around it [WEAK]
             points = detectBRISKFeatures(frame, 'MinQuality', 0.1, 'MinContrast', 0.2, 'ROI', [KLT_point(1) - floor(roi_buoy_featurefinder/2), KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder]);
         end
@@ -98,12 +104,17 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
             
             % Return point of the KLT-tracker
             [KLT_point, validity] = tracker(frame);
+            if (~isempty(KLT_point))        % Average points
+                KLT_point = mean(KLT_point, 1); 
+            elseif (isempty(KLT_point)) 
+                KLT_point = KLT_point_prev; % Take previous value
+            end 
     
             % Estimate distance between found buoy point of KLT-tracker and camera
             distance = estimateDistanceObject(cameraParams, KLT_point, imagePoints, worldPoints, z_centreOfWorld);
 
             % Insert marker in frame to indicate (potential) buoy
-            frame = insertMarker(frame, KLT_point(validity, :), '+', 'Color', 'white');
+            frame = insertMarker(frame, KLT_point(min(validity), :), '+', 'Color', 'white');
             frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(KLT_roi_size/2), ...
                 KLT_point(2) - floor(KLT_roi_size/2), KLT_roi_size, KLT_roi_size], ...
                 ['Distance: ' num2str(distance, '%0.2f') ' [m]'], 'Color', 'white');
@@ -124,14 +135,19 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
         
         % Return points of the KLT-tracker
         [KLT_point, validity] = tracker(frame);
-
+        if (~isempty(KLT_point))        % Average points
+            KLT_point = mean(KLT_point, 1); 
+        elseif (isempty(KLT_point)) 
+            KLT_point = KLT_point_prev; % Take previous value
+        end 
+        
         % Check ROI with "FeatureFinder" based on current returned point of KLT-tracker [WEAK]
         points = detectBRISKFeatures(frame, 'MinQuality', 0.2, 'MinContrast', 0.2, 'ROI', [KLT_point(1) - roi_buoy_featurefinder, KLT_point(2) - roi_buoy_featurefinder, (2*roi_buoy_featurefinder + 1), (2*roi_buoy_featurefinder + 1)]);
         frame = insertShape(frame, 'Rectangle', [KLT_point(1) - floor(roi_buoy_featurefinder/2), KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder], 'Color', 'white');
 
         % Are there no points returned or is the KLT-point no longer valid? 
         % --> tracker should not be alive anymore
-        if (isempty(points) || isempty(KLT_point) || (validity == 0))
+        if (isempty(points) || isempty(KLT_point) || (min(validity) == 0))
             release(tracker); % Release the tracker
             trackerAlive = 0; % Disable tracker
         else % Still (valid) points returned
@@ -139,12 +155,15 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
             distance = estimateDistanceObject(cameraParams, KLT_point, imagePoints, worldPoints, z_centreOfWorld);
 
             % Insert marker in frame to indicate (potential) buoy
-            frame = insertMarker(frame, KLT_point(validity, :), '+', 'Color', 'white');
+            frame = insertMarker(frame, KLT_point(min(validity), :), '+', 'Color', 'white');
             frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(KLT_roi_size/2), ...
                 KLT_point(2) - floor(KLT_roi_size/2), KLT_roi_size, KLT_roi_size], ...
                 ['Distance: ' num2str(distance, '%0.2f') ' [m]'], 'Color', 'white');
         end
     end
+
+    % Save current KLT-point as previous KLT-point
+    KLT_point_prev = KLT_point;
 
     % Convert frame to correct format (dirty fix)
     if (size(frame, 3) == 3)
@@ -154,9 +173,15 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
     % Play current frame in video player
     step(hVPlayer, frame);
 
+%     % Write current frame to video writer object
+%     writeVideo(hVideoOut, frame);
+
     % Increment frame counter
     ii = ii + 1;
 end
 
 % Release video viewer
 release(hVPlayer);
+
+% % Close file
+% close(hVideoOut)
