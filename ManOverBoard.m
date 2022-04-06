@@ -9,7 +9,7 @@
 %% Reset workspace
 clear; clc;
 
-%% Stabilize image + tracking buoy
+%% Stabilize image + tracking buoy + distance estimation
 
 % Load video to variable
 hVideoSrc = VideoReader('MAH01462.MP4');
@@ -56,9 +56,6 @@ tracker = vision.PointTracker('MaxBidirectionalError', 1, 'BlockSize', [KLT_roi_
 % Initialize frames
 imgB = rgb2gray(im2single(readFrame(hVideoSrc)));
 imgBp = imgB;
-
-% Find features of interest in first frame
-points = detectBRISKFeatures(imgBp, 'MinQuality', 0.6, 'MinContrast', 0.3, 'ROI', roi_buoy_initial);
 
 % ALGORITHM
 % 1. Initialize ROI
