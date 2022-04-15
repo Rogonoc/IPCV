@@ -37,6 +37,6 @@ indexPairs = matchFeatures(featuresA, featuresB);
 pointsA = pointsA(indexPairs(:, 1), :);
 pointsB = pointsB(indexPairs(:, 2), :);
 
-%% Use MSAC algorithm to compute the affine transformation
+%% Use MSAC algorithm to compute the projective transformation
 tform = estimateGeometricTransform2D(pointsB, pointsA, 'projective');
 H = tform.T;

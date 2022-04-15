@@ -22,7 +22,7 @@ read(hVideoSrc, 1);
 % open(hVideoOut);
 
 % User input (tracking)
-roi = [0.5, 0.5, 1440, 4.85e+02];                     % Horizontal looking island with trees + clouds in horizon
+roi = [0.5, 0.5, 1440, 4.9e+02];                      % Horizontal looking island with trees + clouds in horizon
 roi_buoy_initial = [6.4325e+02, 5.0e+02, 35.5, 35.5]; % Initial ROI surrounding buoy; based on first frame
 roi_buoy_featurefinder = 31;                          % Size of scanning ROI-region surrounding the KLT-tracker
 mThreshold = 1500;                                    % Strictness of feature extraction for stabilization transforms
@@ -39,7 +39,7 @@ horizon_px_width = pylon_width / pylon_px_size; % Dimensions of a px at the hori
 seawave_wavelength = 3.3;                       % Visual inspection ~ 3.3 [m]  | 11 "rulers" of 30 cm would fit the distance from visual inspection
 
 worldPoints = [0                   0             ;         % Our origin point at (0 [m], 0 [m])
-               0       1.5 * seawave_wavelength  ;         % One-and-a-half wave length 
+               0       1.5 * seawave_wavelength  ;         % One-and-a-half wavelength of a sea wave
                5644                0             ;         % Distance to horizon sqrt(2 * h_observer * R_earth); here h_observer = 2.5 [m]
                5644    98 * horizon_px_width    ];         % Here (III: 1138 [px] - IV: 1040 [px]) = 98 [px]
 
