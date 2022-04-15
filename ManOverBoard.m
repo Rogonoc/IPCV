@@ -22,28 +22,35 @@ read(hVideoSrc, 1);
 % open(hVideoOut);
 
 % User input (tracking)
-roi = [0.5, 0.5, 1440, 5.2575e+02];                   % Horizontal looking island with trees + clouds in horizon
+roi = [0.5, 0.5, 1440, 4.9e+02];                      % Horizontal looking island with trees + clouds in horizon
 roi_buoy_initial = [6.4325e+02, 5.0e+02, 35.5, 35.5]; % Initial ROI surrounding buoy; based on first frame
 roi_buoy_featurefinder = 31;                          % Size of scanning ROI-region surrounding the KLT-tracker
-mThreshold = 1300;                                    % Strictness of feature extraction for stabilization transforms
+mThreshold = 1500;                                    % Strictness of feature extraction for stabilization transforms
 % User input (distance estimation)
 load('cameraParams.mat');                             % Load the intrinsic parameters of calibrated camera
-imagePoints = [125 1080; 402 964; 153 793;            % Checker-like points of waves based on first frame where buoy is found
-               18 707; 637 864; 358 726;
-               171 667; 840 783; 544 681; 
-               354 641; 1011 712; 721 635];
-worldPoints = [0 0; 1 0; 1 1; 1 2; 2 0; 2 1;          % Estimated (unit) real-world distance between checker-like points on waves
-               2 2; 3 0; 3 1; 3 2; 4 0; 4 1];
-waveSize = 5;                                         % Checker pattern of 5-by-5 [m] (this is eyeballed)
-worldPoints = worldPoints * waveSize;                 % ...
-z_centreOfWorld = 2.5;                                % Prior knowledge that the centre of world "lies" 2.5 [m] above sealevel
+imagePoints = [ 721  1080;  % Middle-bottom of image plane
+                144   779;  % Wave peak
+               1138   492;  % First point on horizon
+               1040   490]; % Second point on horizon
+
+pylon_width = 8.4;                              % Found to be 8.4 [m] for a 400 kV transmission tower
+pylon_px_size = 3;                              % Found to be 3 [px]; looking from side view
+horizon_px_width = pylon_width / pylon_px_size; % Dimensions of a px at the horizon [m / px]
+seawave_wavelength = 3;                         % Visual inspection ~ 3 [m]
+
+worldPoints = [0                   0             ;         % Our origin point at (0 [m], 0 [m])
+               0       1.5 * seawave_wavelength  ;         % One-and-a-half wave length --> etermined to be 5 [m]
+               5644                0             ;         % Distance to horizon sqrt(2 * h_observer * R_earth); here h_observer = 2.5 [m]
+               5644    98 * horizon_px_width    ];         % Here (III: 1138 [px] - IV: 1040 [px]) = 98 [px]
+
+z_centreOfWorld = 0;    % Centre of world coordinate system; at z = 0
 
 % Initialize other variables
 trackerAlive = 0;     % State of KLT-tracker (1)
 trackerWasAlive = 0;  % State of KLT-tracker (2)
 KLT_roi_size = 5;     % Block size of KLT-tracker
-KLT_point_prev = []; % Previous point spit out by KLT-tracker
-KLT_point = [];      % Points spit out by KLT-tracker
+KLT_point_prev = [];  % Previous point spit out by KLT-tracker
+KLT_point = [];       % Points spit out by KLT-tracker
 ii = 2;               % Loop variable for frames
 Hcumulative = eye(3); % Initial transformation matrix (stabilization)
 
@@ -72,7 +79,7 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
     imgB = rgb2gray(im2single(readFrame(hVideoSrc)));
 
     % Estimate transform from current frame A to next frame B
-    H = estimateTransformFeatures(imgA, imgB, 1500, roi);
+    H = estimateTransformFeatures(imgA, imgB, mThreshold, roi);
 
     % Compute cumulative transformation matrix
     Hcumulative = H * Hcumulative;
@@ -111,18 +118,18 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
             distance = estimateDistanceObject(cameraParams, KLT_point, imagePoints, worldPoints, z_centreOfWorld);
 
             % Insert marker in frame to indicate (potential) buoy
-            frame = insertMarker(frame, KLT_point(min(validity), :), '+', 'Color', 'white');
-            frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(KLT_roi_size/2), ...
-                KLT_point(2) - floor(KLT_roi_size/2), KLT_roi_size, KLT_roi_size], ...
+            frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(roi_buoy_featurefinder/2), ...
+                KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder], ...
                 ['Distance: ' num2str(distance, '%0.2f') ' [m]'], 'Color', 'white');
 
             % Indicate that tracker is alive
             trackerAlive = 1;
             trackerWasAlive = 1;
         elseif (isempty(points) && trackerWasAlive == 1) 
-            % Insert marker in frame to indicate ROI
-            frame = insertShape(frame, 'Rectangle', [KLT_point(1) - floor(roi_buoy_featurefinder/2), ...
-                KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder], 'Color', 'white');
+            % Insert marker in frame to indicate ROI around "dead" point
+            frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(roi_buoy_featurefinder/2), ...
+                KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder], ...
+                ['Distance: ' num2str(distance, '%0.2f') ' [m]'], 'Color', 'white');
         end
 
     elseif (trackerAlive == 1) % Tracker active
@@ -138,24 +145,21 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
             KLT_point = KLT_point_prev; % Take previous value
         end 
         
+        % Estimate distance between found buoy point of KLT-tracker and camera
+        distance = estimateDistanceObject(cameraParams, KLT_point, imagePoints, worldPoints, z_centreOfWorld);
+
         % Check ROI with "FeatureFinder" based on current returned point of KLT-tracker [WEAK]
-        points = detectBRISKFeatures(frame, 'MinQuality', 0.2, 'MinContrast', 0.2, 'ROI', [KLT_point(1) - roi_buoy_featurefinder, KLT_point(2) - roi_buoy_featurefinder, (2*roi_buoy_featurefinder + 1), (2*roi_buoy_featurefinder + 1)]);
-        frame = insertShape(frame, 'Rectangle', [KLT_point(1) - floor(roi_buoy_featurefinder/2), KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder], 'Color', 'white');
+        points = detectBRISKFeatures(frame, 'MinQuality', 0.2, 'MinContrast', 0.2, 'ROI', [KLT_point(1) - roi_buoy_featurefinder, KLT_point(2) - roi_buoy_featurefinder, ...
+            (2*roi_buoy_featurefinder + 1), (2*roi_buoy_featurefinder + 1)]);
+        frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(roi_buoy_featurefinder/2), ...
+            KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder], ...
+            ['Distance: ' num2str(distance, '%0.2f') ' [m]'], 'Color', 'white');
 
         % Are there no points returned or is the KLT-point no longer valid? 
         % --> tracker should not be alive anymore
         if (isempty(points) || isempty(KLT_point) || (min(validity) == 0))
             release(tracker); % Release the tracker
             trackerAlive = 0; % Disable tracker
-        else % Still (valid) points returned
-            % Estimate distance between found buoy point of KLT-tracker and camera
-            distance = estimateDistanceObject(cameraParams, KLT_point, imagePoints, worldPoints, z_centreOfWorld);
-
-            % Insert marker in frame to indicate (potential) buoy
-            frame = insertMarker(frame, KLT_point(min(validity), :), '+', 'Color', 'white');
-            frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(KLT_roi_size/2), ...
-                KLT_point(2) - floor(KLT_roi_size/2), KLT_roi_size, KLT_roi_size], ...
-                ['Distance: ' num2str(distance, '%0.2f') ' [m]'], 'Color', 'white');
         end
     end
 
