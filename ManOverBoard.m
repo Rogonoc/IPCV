@@ -24,7 +24,7 @@ read(hVideoSrc, 1);
 % User input (tracking)
 roi = [0.5, 0.5, 1440, 4.9e+02];                      % Horizontal looking island with trees + clouds in horizon
 roi_buoy_initial = [6.4325e+02, 5.0e+02, 35.5, 35.5]; % Initial ROI surrounding buoy; based on first frame
-roi_buoy_featurefinder = 31;                          % Size of scanning ROI-region surrounding the KLT-tracker
+roi_buoy_featurefinder = 32;                          % Size of scanning ROI-region surrounding the KLT-tracker
 mThreshold = 1500;                                    % Strictness of feature extraction for stabilization transforms
 % User input (distance estimation)
 load('cameraParams.mat');                             % Load the intrinsic parameters of calibrated camera
@@ -97,8 +97,8 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
         if (trackerWasAlive == 0)     % Use initial knowledge of ROI around buoy to start tracking it [STRICT]
             points = detectBRISKFeatures(frame, 'MinQuality', 0.3, 'MinContrast', 0.3, 'ROI', roi_buoy_initial);
             frame = insertShape(frame, 'Rectangle', roi_buoy_initial, 'Color', 'white'); frame = rgb2gray(im2single(frame));
-        elseif (trackerWasAlive == 1) % Use previous knowledge of KLT-tracker point to cast new ROI around it [STRICT]
-            points = detectBRISKFeatures(frame, 'MinQuality', 0.3, 'MinContrast', 0.3, 'ROI', [KLT_point(1) - floor(roi_buoy_featurefinder/2), KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder]);
+        elseif (trackerWasAlive == 1) % Use previous knowledge of KLT-tracker point to cast new ROI around it [SEMI-STRICT]
+            points = detectBRISKFeatures(frame, 'MinQuality', 0.1, 'MinContrast', 0.3, 'ROI', [KLT_point(1) - floor(roi_buoy_featurefinder/2), KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder]);
         end
 
         % Check if points were returned by FeatureFinder in ROI
