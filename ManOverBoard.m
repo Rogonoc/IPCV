@@ -36,10 +36,10 @@ imagePoints = [ 721  1080;  % Middle-bottom of image plane
 pylon_width = 8.4;                              % Found to be 8.4 [m] for a 400 kV transmission tower
 pylon_px_size = 3;                              % Found to be 3 [px]; looking from side view
 horizon_px_width = pylon_width / pylon_px_size; % Dimensions of a px at the horizon [m / px]
-seawave_wavelength = 3;                         % Visual inspection ~ 3 [m]
+seawave_wavelength = 3.3;                       % Visual inspection ~ 3.3 [m]  | 11 "rulers" of 30 cm would fit the distance from visual inspection
 
 worldPoints = [0                   0             ;         % Our origin point at (0 [m], 0 [m])
-               0       1.5 * seawave_wavelength  ;         % One-and-a-half wave length --> etermined to be 5 [m]
+               0       1.5 * seawave_wavelength  ;         % One-and-a-half wave length 
                5644                0             ;         % Distance to horizon sqrt(2 * h_observer * R_earth); here h_observer = 2.5 [m]
                5644    98 * horizon_px_width    ];         % Here (III: 1138 [px] - IV: 1040 [px]) = 98 [px]
 
@@ -97,15 +97,19 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
         if (trackerWasAlive == 0)     % Use initial knowledge of ROI around buoy to start tracking it [STRICT]
             points = detectBRISKFeatures(frame, 'MinQuality', 0.3, 'MinContrast', 0.3, 'ROI', roi_buoy_initial);
             frame = insertShape(frame, 'Rectangle', roi_buoy_initial, 'Color', 'white'); frame = rgb2gray(im2single(frame));
-        elseif (trackerWasAlive == 1) % Use previous knowledge of KLT-tracker point to cast new ROI around it [WEAK]
-            points = detectBRISKFeatures(frame, 'MinQuality', 0.1, 'MinContrast', 0.2, 'ROI', [KLT_point(1) - floor(roi_buoy_featurefinder/2), KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder]);
+        elseif (trackerWasAlive == 1) % Use previous knowledge of KLT-tracker point to cast new ROI around it [STRICT]
+            points = detectBRISKFeatures(frame, 'MinQuality', 0.3, 'MinContrast', 0.3, 'ROI', [KLT_point(1) - floor(roi_buoy_featurefinder/2), KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder]);
         end
 
         % Check if points were returned by FeatureFinder in ROI
-        if ~isempty(points) 
+        if ~isempty(points) % START TRACKER
             % Initialize the KLT-tracker on the found point
-            initialize(tracker, points.Location, frame);
+            initialize(tracker, mean(points.Location, 1), frame);
             
+            % Indicate that tracker is alive
+            trackerAlive = 1;
+            trackerWasAlive = 1;
+
             % Return point of the KLT-tracker
             [KLT_point, validity] = tracker(frame);
             if (~isempty(KLT_point))        % Average points
@@ -120,16 +124,13 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
             % Insert marker in frame to indicate (potential) buoy
             frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(roi_buoy_featurefinder/2), ...
                 KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder], ...
-                ['Distance: ' num2str(distance, '%0.2f') ' [m]'], 'Color', 'white');
+                ['Distance: ' num2str(distance, '%0.2f') ' [m]', '  Tracker: ' num2str(trackerAlive)], 'Color', 'white');
 
-            % Indicate that tracker is alive
-            trackerAlive = 1;
-            trackerWasAlive = 1;
-        elseif (isempty(points) && trackerWasAlive == 1) 
+        elseif (isempty(points) && trackerWasAlive == 1)  % DON'T START TRACKER
             % Insert marker in frame to indicate ROI around "dead" point
             frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(roi_buoy_featurefinder/2), ...
                 KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder], ...
-                ['Distance: ' num2str(distance, '%0.2f') ' [m]'], 'Color', 'white');
+                ['Distance: ' num2str(distance, '%0.2f') ' [m]', '  Tracker: ' num2str(trackerAlive)], 'Color', 'white');
         end
 
     elseif (trackerAlive == 1) % Tracker active
@@ -153,7 +154,7 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
             (2*roi_buoy_featurefinder + 1), (2*roi_buoy_featurefinder + 1)]);
         frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(roi_buoy_featurefinder/2), ...
             KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder], ...
-            ['Distance: ' num2str(distance, '%0.2f') ' [m]'], 'Color', 'white');
+            ['Distance: ' num2str(distance, '%0.2f') ' [m]', '  Tracker: ' num2str(trackerAlive)], 'Color', 'white');
 
         % Are there no points returned or is the KLT-point no longer valid? 
         % --> tracker should not be alive anymore
