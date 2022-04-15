@@ -22,7 +22,7 @@ read(hVideoSrc, 1);
 % open(hVideoOut);
 
 % User input (tracking)
-roi = [0.5, 0.5, 1440, 4.9e+02];                      % Horizontal looking island with trees + clouds in horizon
+roi = [0.5, 0.5, 1440, 5.0e+02];                      % Horizontal looking island with trees + clouds in horizon
 roi_buoy_initial = [6.4325e+02, 5.0e+02, 35.5, 35.5]; % Initial ROI surrounding buoy; based on first frame
 roi_buoy_featurefinder = 31;                          % Size of scanning ROI-region surrounding the KLT-tracker
 mThreshold = 1500;                                    % Strictness of feature extraction for stabilization transforms
