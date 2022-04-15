@@ -97,7 +97,7 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
         if (trackerWasAlive == 0)     % Use initial knowledge of ROI around buoy to start tracking it [STRICT]
             points = detectBRISKFeatures(frame, 'MinQuality', 0.3, 'MinContrast', 0.3, 'ROI', roi_buoy_initial);
             frame = insertShape(frame, 'Rectangle', roi_buoy_initial, 'Color', 'white'); frame = rgb2gray(im2single(frame));
-        elseif (trackerWasAlive == 1) % Use previous knowledge of KLT-tracker point to cast new ROI around it [SEMI-STRICT]
+        elseif (trackerWasAlive == 1) % Use previous knowledge of KLT-tracker point to cast new ROI around it [RELATIVELY WEAK]
             points = detectBRISKFeatures(frame, 'MinQuality', 0.1, 'MinContrast', 0.3, 'ROI', [KLT_point(1) - floor(roi_buoy_featurefinder/2), KLT_point(2) - floor(roi_buoy_featurefinder/2), roi_buoy_featurefinder, roi_buoy_featurefinder]);
         end
 
@@ -149,7 +149,7 @@ while hasFrame(hVideoSrc) && ii < hVideoSrc.NumFrames
         % Estimate distance between found buoy point of KLT-tracker and camera
         distance = estimateDistanceObject(cameraParams, KLT_point, imagePoints, worldPoints, z_centreOfWorld);
 
-        % Check ROI with "FeatureFinder" based on current returned point of KLT-tracker [WEAK]
+        % Check ROI with "FeatureFinder" based on current returned point of KLT-tracker [SEMI-STRICT]
         points = detectBRISKFeatures(frame, 'MinQuality', 0.2, 'MinContrast', 0.2, 'ROI', [KLT_point(1) - roi_buoy_featurefinder, KLT_point(2) - roi_buoy_featurefinder, ...
             (2*roi_buoy_featurefinder + 1), (2*roi_buoy_featurefinder + 1)]);
         frame = insertObjectAnnotation(frame, 'Rectangle', [KLT_point(1) - floor(roi_buoy_featurefinder/2), ...
